@@ -2,9 +2,6 @@
 
 A modular Python system that observes your desktop session (with explicit user consent) and generates structured, real-time insights about what you're doing — and how to do it better — using Google Gemini.
 
-> This is not a toy "AI assistant."  
-> It's a loop that turns raw screen state into **actionable reasoning**.
-
 ---
 
 ## What This Actually Does
@@ -46,14 +43,6 @@ desktop_agent/
 ├── data/               # SQLite persistence layer
 └── main.py             # Entry point
 ```
-
-This separation is intentional:
-
-- **Perception** is deterministic
-- **Reasoning** is probabilistic
-- **State** ties them together
-
----
 
 ## Why This Exists
 
@@ -149,8 +138,6 @@ If you ignore this file, the system will work — just inefficiently.
      - **Prediction**
 7. Insight is displayed + stored
 
-No black box. Every step is inspectable.
-
 ---
 
 ## Output Example
@@ -170,21 +157,11 @@ If your outputs look generic, your prompts or thresholds are wrong.
 ## Design Constraints (Important)
 
 - **Not real-time streaming** → interval-based by design
-- **LLM calls are expensive** → aggressively throttled
+- **LLM calls are expensive** → aggressively throttled so use only when you needed to check something.
 - **OCR is noisy** → system relies on aggregation, not single frames
 - **Privacy-first assumption** → nothing leaves your machine except prompts
 
 If you try to turn this into a continuous surveillance system, you'll break both cost and signal quality.
-
----
-
-## Stopping the Agent
-
-`Ctrl + C`
-
-Graceful shutdown ensures:
-- SQLite is flushed
-- No partial state corruption
 
 ---
 
@@ -195,7 +172,7 @@ Graceful shutdown ensures:
 - Not a generic "AI assistant"
 - Not production-hardened for enterprise deployment
 
-It's a **foundation system** for building workflow intelligence.
+It's a **foundation system** for building workflow intelligence. where its logs your activities and give insight on your behavioral process.
 
 ---
 
