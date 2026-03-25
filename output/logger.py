@@ -3,12 +3,16 @@ desktop_agent.output.logger
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Centralized logging configuration with rotating file handler and
 coloured console output.
+
+Each agent session creates a timestamped folder under ``logs/`` so
+log files are organized by run date+time.
 """
 
 from __future__ import annotations
 
 import logging
 import sys
+from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
@@ -36,8 +40,11 @@ class _ColorFormatter(logging.Formatter):
         return super().format(record)
 
 
-def setup_logging(config: dict[str, Any]) -> None:
-    """Configure the root logger from *config['logging']*."""
+def setup_logging(config: dict[str, Any]) -> Path:
+    """Configure the root logger from *config['logging']*.
+
+    Returns the path to the session log directory.
+    """
     log_cfg = config.get("logging", {})
     level_name = log_cfg.get("level", "INFO").upper()
     level = getattr(logging, level_name, logging.INFO)
@@ -45,7 +52,7 @@ def setup_logging(config: dict[str, Any]) -> None:
     root = logging.getLogger()
     root.setLevel(level)
 
-    # Remove any pre‐existing handlers
+    # Remove any pre-existing handlers
     root.handlers.clear()
 
     fmt = "%(asctime)s │ %(levelname)-8s │ %(name)-30s │ %(message)s"
@@ -57,14 +64,20 @@ def setup_logging(config: dict[str, Any]) -> None:
     console.setFormatter(_ColorFormatter(fmt, datefmt=date_fmt))
     root.addHandler(console)
 
-    # ── File handler (rotating) ─────────────────────────────────────────
-    log_file = log_cfg.get("file", "desktop_agent.log")
+    # ── Log folder: agent error logs / <date> / <time>_<file> ─────────
+    log_base = Path(log_cfg.get("directory", "agent error logs"))
+    now = datetime.now()
+    date_folder = now.strftime("%Y-%m-%d")       # same day → same folder
+    time_prefix = now.strftime("%H-%M-%S")        # unique per session
+    session_dir = log_base / date_folder
+    session_dir.mkdir(parents=True, exist_ok=True)
+
+    log_filename = log_cfg.get("file", "desktop_agent.log")
+    log_path = session_dir / f"{time_prefix}_{log_filename}"
     max_bytes = log_cfg.get("max_bytes", 5_242_880)
     backup_count = log_cfg.get("backup_count", 3)
 
-    log_path = Path(log_file)
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-
+    # ── File handler (rotating) ─────────────────────────────────────────
     file_handler = RotatingFileHandler(
         log_path,
         maxBytes=max_bytes,
@@ -76,5 +89,7 @@ def setup_logging(config: dict[str, Any]) -> None:
     root.addHandler(file_handler)
 
     logging.getLogger(__name__).info(
-        "Logging initialised — level=%s, file=%s", level_name, log_path
+        "Logging initialised — level=%s, session=%s", level_name, session_dir
     )
+    return session_dir
+

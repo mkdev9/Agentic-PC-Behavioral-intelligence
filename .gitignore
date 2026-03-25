@@ -23,8 +23,8 @@ env/
 *.swp
 *.swo
 
-# Logs
-*.log
+# Logs (date-separated session folders)
+agent error logs/
 
 # Database (session data)
 data/

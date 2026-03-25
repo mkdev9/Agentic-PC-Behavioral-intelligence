@@ -40,7 +40,9 @@ throttling:
 
 logging:
   level: "INFO"
-  # Rotating log file
+  # Base directory — date subfolders are created automatically
+  directory: "agent error logs"
+  # Log filename inside each session folder
   file: "desktop_agent.log"
   max_bytes: 5242880   # 5 MB
   backup_count: 3
