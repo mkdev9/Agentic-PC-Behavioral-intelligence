@@ -1,110 +1,216 @@
 # Desktop Observability Agent
 
-A production-grade, modular Python system that continuously observes your desktop session (with explicit consent) and generates real-time AI-powered insights about your activity using Google Gemini.
+A modular Python system that observes your desktop session (with explicit user consent) and generates structured, real-time insights about what you're doing — and how to do it better — using Google Gemini.
 
-## Architecture
+> This is not a toy "AI assistant."  
+> It's a loop that turns raw screen state into **actionable reasoning**.
+
+---
+
+## What This Actually Does
+
+Most tools log activity. This one **interprets** it.
+
+- Watches your screen (interval-based, not invasive streaming)
+- Extracts text + context from what you're doing
+- Infers intent and workflow patterns
+- Identifies inefficiencies
+- Suggests optimizations in real time
+- Stores history for longitudinal reasoning
+
+You end up with something closer to a **personal workflow analyst** than a tracker.
+
+---
+
+## Core Loop
 
 ```
 CAPTURE → PERCEIVE → STRUCTURE → REASON → OUTPUT → STORE → REPEAT
 ```
 
+This is deliberate. Each stage is isolated so you can replace or extend it without breaking the system.
+
+---
+
+## Architecture
+
 ```
 desktop_agent/
-├── core/               # Agent loop, orchestrator, session state
-│   ├── loop.py
-│   ├── orchestrator.py
-│   └── state_manager.py
-├── perception/         # Screen capture, OCR, window tracking
-│   ├── screen_capture.py
-│   ├── ocr_engine.py
-│   ├── window_tracker.py
-│   └── activity_classifier.py
-├── reasoning/          # LLM client, prompt engineering, summarization
-│   ├── gemini_client.py
-│   ├── prompt_builder.py
-│   └── summarizer.py
-├── output/             # Logging, console narration, optional overlay
-│   ├── logger.py
-│   ├── narrator.py
-│   └── overlay.py
-├── config/
-│   └── settings.yaml
-├── utils/              # Config loader, hashing, throttling, retry
-│   ├── helpers.py
-│   └── throttling.py
-├── data/               # SQLite DB (created at runtime)
-├── main.py
-├── requirements.txt
-└── README.md
+├── core/               # Orchestration, loop control, session lifecycle
+├── perception/         # Raw signal extraction (screen, OCR, app context)
+├── reasoning/          # LLM interaction + prompt construction
+├── output/             # Human-facing feedback (console / overlay)
+├── config/             # Runtime configuration
+├── utils/              # Shared primitives (throttling, hashing, etc.)
+├── ui/                 # Dashboard interface
+├── data/               # SQLite persistence layer
+└── main.py             # Entry point
 ```
+
+This separation is intentional:
+
+- **Perception** is deterministic
+- **Reasoning** is probabilistic
+- **State** ties them together
+
+---
+
+## Why This Exists
+
+If you can't observe your workflow at a systems level, you can't improve it.
+
+This project is built around a simple assumption:
+
+> Most productivity loss is not from lack of effort, but from **invisible inefficiencies**.
+
+This agent makes those inefficiencies explicit.
+
+---
 
 ## Prerequisites
 
-| Dependency | Purpose |
+| Dependency | Why it exists |
 |---|---|
 | Python 3.11+ | Runtime |
-| [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) | Text extraction from screenshots |
-| Google Gemini API key | LLM reasoning |
+| [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) | Converts pixels → text |
+| Gemini API key | Converts context → reasoning |
 
 ### Install Tesseract (Windows)
 
-1. Download the installer from [UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki).
-2. Install and add the install directory (e.g. `C:\Program Files\Tesseract-OCR`) to your system `PATH`.
-3. Verify: `tesseract --version`
+1. Download from: https://github.com/UB-Mannheim/tesseract/wiki
+2. Install and add to `PATH`
+3. Verify:
+
+```bash
+tesseract --version
+```
+
+---
 
 ## Setup
 
 ```bash
-# 1. Clone / navigate to the project
+# Clone the repo
 cd desktop_agent
 
-# 2. Create a virtual environment
+# Create environment
 python -m venv .venv
-.venv\Scripts\activate   # Windows
-# source .venv/bin/activate  # Linux / macOS
+.venv\Scripts\activate
 
-# 3. Install dependencies
+# Install deps
 pip install -r requirements.txt
 
-# 4. Set your Gemini API key
-set GEMINI_API_KEY=your_api_key_here        # Windows CMD
-# $env:GEMINI_API_KEY="your_api_key_here"   # PowerShell
-# export GEMINI_API_KEY=your_api_key_here   # Bash
+# Set API key
+set GEMINI_API_KEY=your_api_key_here
 
-# 5. Run the agent
+# Run (console mode)
 python main.py
+
+# Run (dashboard UI)
+python main.py --ui
 ```
+
+---
 
 ## Configuration
 
-Edit `config/settings.yaml` to tune:
+Edit `config/settings.yaml`.
 
-- **`agent.capture_interval`** — seconds between capture cycles (default `5`)
-- **`throttling.min_interval`** — minimum seconds between LLM calls (default `30`)
-- **`throttling.change_threshold`** — perceptual hash distance to consider the screen "changed"
-- **`llm.model`** — Gemini model identifier (default `gemini-2.0-flash`)
-- **`output.overlay`** — set to `true` to enable the floating HUD window
+Key controls:
 
-## How It Works
+| Setting | What it controls |
+|---|---|
+| `capture_interval` | How often the system observes your screen. Lower = more responsive, higher cost. |
+| `min_interval` | Hard throttle on LLM calls. Prevents useless repeated reasoning. |
+| `change_threshold` | Defines what "meaningful change" means. Critical for cost vs signal quality. |
+| `model` | Gemini model selection |
+| `overlay` | Enables/disables real-time UI layer |
 
-1. **ScreenCapture** grabs the primary monitor using `mss`.
-2. **OCREngine** extracts visible text with Tesseract.
-3. **WindowTracker** identifies the active app and process.
-4. **ActivityClassifier** maps the app/text to a category (coding, browsing, etc.).
-5. **Throttler** checks whether the screen has changed enough to warrant an LLM call.
-6. **PromptBuilder** assembles context (current + historical) into a structured prompt.
-7. **GeminiClient** sends the prompt and receives an insight structured as:
-   - `[ACTIVITY]` — what the user is doing
-   - `[INTENT]` — inferred goal
-   - `[INEFFICIENCY]` — detected friction
-   - `[OPTIMIZATION]` — actionable suggestion
-   - `[PREDICTION]` — what comes next
-8. **Narrator** prints the insight to the console with colour.
-9. **StateManager** persists the snapshot to SQLite for future context.
+If you ignore this file, the system will work — just inefficiently.
+
+---
+
+## How It Works (Concrete Flow)
+
+1. Screen is captured using `mss`
+2. OCR extracts visible text
+3. Active window + process are identified
+4. Activity is classified (coding, browsing, etc.)
+5. A perceptual hash detects meaningful change
+6. If change passes threshold:
+   - Context is built (current + history)
+   - Prompt is constructed
+   - Gemini is queried
+   - Output is structured into:
+     - **Activity**
+     - **Intent**
+     - **Inefficiency**
+     - **Optimization**
+     - **Prediction**
+7. Insight is displayed + stored
+
+No black box. Every step is inspectable.
+
+---
+
+## Output Example
+
+```
+[ACTIVITY] Debugging Python code in VS Code
+[INTENT] Fixing runtime error in data pipeline
+[INEFFICIENCY] Re-reading logs without isolating failure point
+[OPTIMIZATION] Add targeted logging or breakpoint inspection
+[PREDICTION] Will continue trial-and-error debugging
+```
+
+If your outputs look generic, your prompts or thresholds are wrong.
+
+---
+
+## Design Constraints (Important)
+
+- **Not real-time streaming** → interval-based by design
+- **LLM calls are expensive** → aggressively throttled
+- **OCR is noisy** → system relies on aggregation, not single frames
+- **Privacy-first assumption** → nothing leaves your machine except prompts
+
+If you try to turn this into a continuous surveillance system, you'll break both cost and signal quality.
+
+---
 
 ## Stopping the Agent
 
-Press **Ctrl+C** for a graceful shutdown. The database is flushed and all resources are released.
+`Ctrl + C`
+
+Graceful shutdown ensures:
+- SQLite is flushed
+- No partial state corruption
+
+---
+
+## What This Is NOT
+
+- Not a keylogger
+- Not spyware
+- Not a generic "AI assistant"
+- Not production-hardened for enterprise deployment
+
+It's a **foundation system** for building workflow intelligence.
+
+---
+
+## Where This Can Go (If You Push It)
+
+If you extend this properly, you get:
+
+- Long-term behavioral modeling
+- Productivity scoring systems
+- Autonomous workflow suggestions
+- Context-aware automation triggers
+
+Most people won't build that far. That's where the leverage is.
+
+---
 
 ## License
 
