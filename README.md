@@ -2,9 +2,6 @@
 
 A modular Python system that observes your desktop session (with explicit user consent) and generates structured, real-time insights about what you're doing — and how to do it better — using Google Gemini.
 
-> This is not a toy "AI assistant."  
-> It's a loop that turns raw screen state into **actionable reasoning**.
-
 ---
 
 ## What This Actually Does
