@@ -80,7 +80,6 @@ tesseract --version
 
 ```bash
 # Clone the repo
-cd desktop_agent
 
 # Create environment
 python -m venv .venv
